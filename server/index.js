@@ -19,13 +19,16 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      process.env.CLIENT_URL, // e.g. https://your-client.onrender.com
+      process.env.CLIENT_URL, // https://event-project0-client.onrender.com
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+
+app.options("*", cors());
 
 
 mongoose
@@ -38,13 +41,14 @@ app.get("/", (req, res) => {
   res.send("Event App API running");
 });
 
+
 app.get("/health", (req, res) => {
   res.json({ status: "ok", message: "Server is running" });
 });
 
 
 function authMiddleware(req, res, next) {
-  const authHeader = req.headers.authorization; 
+  const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ message: "No token" });
 
   const parts = authHeader.split(" ");
@@ -54,7 +58,7 @@ function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; 
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid token" });
@@ -69,6 +73,8 @@ function adminOnly(req, res, next) {
 }
 
 
+
+// Register
 app.post("/userRegister", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -104,6 +110,7 @@ app.post("/userRegister", async (req, res) => {
   }
 });
 
+// Login
 app.post("/userLogin", async (req, res) => {
   try {
     const { email, password, role } = req.body;
@@ -164,7 +171,7 @@ app.post("/userLogin", async (req, res) => {
 
 
 
-// Get all events 
+// Get all events
 app.get("/events", async (req, res) => {
   try {
     const events = await Event.find().sort({ eventDate: 1 });
@@ -204,7 +211,7 @@ app.put("/updateEvent/:id", authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-// Delete event 
+
 app.delete("/deleteEvent/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
     await Event.findByIdAndDelete(req.params.id);
