@@ -6,25 +6,40 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
 
-
 import User from "./models/User.js";
 import Event from "./models/Event.js";
 
 const app = express();
 
 
-app.use(cors());
 app.use(express.json());
+
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      process.env.CLIENT_URL, // e.g. https://your-client.onrender.com
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 
 mongoose
   .connect(process.env.MONGO_URL)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log("Mongo Error:", err));
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => console.log("❌ Mongo Error:", err));
 
 
 app.get("/", (req, res) => {
   res.send("Event App API running");
+});
+
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", message: "Server is running" });
 });
 
 
@@ -32,7 +47,10 @@ function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization; 
   if (!authHeader) return res.status(401).json({ message: "No token" });
 
-  const token = authHeader.split(" ")[1];
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2) return res.status(401).json({ message: "Bad token" });
+
+  const token = parts[1];
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -55,8 +73,9 @@ app.post("/userRegister", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password)
+    if (!name || !email || !password) {
       return res.json({ msg: "All fields are required" });
+    }
 
     const exist = await User.findOne({ email });
     if (exist) return res.json({ msg: "User already exist !" });
@@ -85,39 +104,41 @@ app.post("/userRegister", async (req, res) => {
   }
 });
 
-
 app.post("/userLogin", async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
-    if (!email || !password)
+    if (!email || !password) {
       return res.json({
         serverMsg: "All fields are required",
         loginStatus: false,
       });
+    }
 
     const user = await User.findOne({ email });
-    if (!user)
+    if (!user) {
       return res.json({
         serverMsg: "User not found",
         loginStatus: false,
       });
+    }
 
    
-    if (role && user.role !== role)
+    if (role && user.role !== role) {
       return res.json({
         serverMsg: "Access denied for this role",
         loginStatus: false,
       });
+    }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch)
+    if (!isMatch) {
       return res.json({
         serverMsg: "Incorrect password",
         loginStatus: false,
       });
+    }
 
-   
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -143,7 +164,7 @@ app.post("/userLogin", async (req, res) => {
 
 
 
-
+// Get all events 
 app.get("/events", async (req, res) => {
   try {
     const events = await Event.find().sort({ eventDate: 1 });
@@ -154,7 +175,7 @@ app.get("/events", async (req, res) => {
   }
 });
 
-//  Add event
+// Add event 
 app.post("/addEvent", authMiddleware, adminOnly, async (req, res) => {
   try {
     const newEvent = await Event.create({
@@ -168,7 +189,7 @@ app.post("/addEvent", authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-// Update event
+// Update event 
 app.put("/updateEvent/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
     const updatedEvent = await Event.findByIdAndUpdate(
@@ -183,7 +204,7 @@ app.put("/updateEvent/:id", authMiddleware, adminOnly, async (req, res) => {
   }
 });
 
-// Delete event
+// Delete event 
 app.delete("/deleteEvent/:id", authMiddleware, adminOnly, async (req, res) => {
   try {
     await Event.findByIdAndDelete(req.params.id);
@@ -196,4 +217,4 @@ app.delete("/deleteEvent/:id", authMiddleware, adminOnly, async (req, res) => {
 
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
