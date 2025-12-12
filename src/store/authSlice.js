@@ -1,8 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API_URL = "http://localhost:5000"; 
-
+// ✅ Use Render URL in production via env var, fallback to localhost for local dev
+const API_URL =
+  process.env.REACT_APP_API_URL?.trim() || "http://localhost:5000";
 
 export const registerUser = createAsyncThunk(
   "auth/registerUser",
@@ -14,14 +15,15 @@ export const registerUser = createAsyncThunk(
         password,
       });
 
-    
       if (!res.data || !res.data.user) {
         return rejectWithValue(res.data?.msg || "Register failed");
       }
 
       return res.data.user;
     } catch (err) {
-      return rejectWithValue("Register failed");
+      return rejectWithValue(
+        err?.response?.data?.msg || err?.message || "Register failed"
+      );
     }
   }
 );
@@ -33,10 +35,9 @@ export const login = createAsyncThunk(
       const res = await axios.post(`${API_URL}/userLogin`, {
         email,
         password,
-        role, // user or admin
+        role,
       });
 
-      
       if (!res.data.loginStatus) {
         return rejectWithValue(res.data.serverMsg || "Login failed");
       }
@@ -47,7 +48,9 @@ export const login = createAsyncThunk(
 
       return res.data.user;
     } catch (err) {
-      return rejectWithValue("Login failed");
+      return rejectWithValue(
+        err?.response?.data?.serverMsg || err?.message || "Login failed"
+      );
     }
   }
 );
@@ -67,7 +70,6 @@ const authSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
- 
     builder
       .addCase(registerUser.pending, (state) => {
         state.status = "loading";
@@ -76,14 +78,13 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.error = null;
-        state.user = action.payload; 
+        state.user = action.payload;
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload || "Register failed";
       });
 
-  
     builder
       .addCase(login.pending, (state) => {
         state.status = "loading";
