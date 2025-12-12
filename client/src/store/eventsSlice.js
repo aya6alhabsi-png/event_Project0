@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-// ✅ Use Render URL in production via env var, fallback to localhost for local dev
+
 const API_URL =
   process.env.REACT_APP_API_URL?.trim() || "http://localhost:5000";
 
@@ -112,3 +112,4 @@ const eventsSlice = createSlice({
 });
 
 export default eventsSlice.reducer;
+
